@@ -178,20 +178,25 @@ def sayfa_getir_playwright(url, secim=None):
         pg.wait_for_timeout(4000)
         gorunen = None
         if secim:
+            hedef = pg.get_by_text(re.compile(r"^\s*" + re.escape(secim).replace("\\ ", r"\s*") + r"\s*$", re.I))
+            if hedef.count() == 0:
+                log(f"  Sayfada '{secim}' seçeneği yok (şu an satışta değil)")
+                b.close()
+                return None, None
             try:
-                pg.get_by_text(secim, exact=False).first.click(timeout=10000)
+                hedef.first.click(timeout=10000)
                 pg.wait_for_timeout(4000)
             except Exception as e:
                 log(f"  '{secim}' seçeneğine tıklanamadı: {e.__class__.__name__}")
                 b.close()
                 return None, None
-            for sel in GORUNEN_FIYAT_SECICILER:
-                el = pg.query_selector(sel)
-                if el and el.is_visible():
-                    v = tl_to_float(el.inner_text())
-                    if v and v > 100:
-                        gorunen = v
-                        break
+            # Fiyat: ürün başlığından sonra, "farklı boylarını" bölümünden önce görünen ilk TL tutarı
+            metin = pg.inner_text("body")
+            bitis = metin.find("farklı boy")
+            bolum = metin[:bitis] if bitis > 0 else metin
+            tutarlar = re.findall(r"(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:TL|₺)(?!\s*/)", bolum)
+            if tutarlar:
+                gorunen = tl_to_float(tutarlar[-1])
         html = pg.content()
         b.close()
         return html, gorunen
