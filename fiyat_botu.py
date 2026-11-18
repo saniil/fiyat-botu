@@ -197,9 +197,14 @@ def _sephora_oku(pg):
 def secili_boy_fiyati(pg, secim):
     """Sephora tipi boy seçici: seçili boy istenen değilse seçiciyi açıp istenen boya tıklar."""
     istenen = int(re.search(r"\d+", secim).group())
+    try:
+        pg.get_by_text(re.compile("farklı boy")).first.wait_for(timeout=25000)
+    except Exception:
+        pass
     boy, ana, birim = _sephora_oku(pg)
     if boy is None:
-        log("  Boy seçici bulunamadı")
+        metin = re.sub(r"\s+", " ", pg.inner_text("body"))
+        log(f"  Boy seçici bulunamadı. Başlık: {pg.title()[:80]!r} | Metin: {metin[:300]!r}")
         return None
     if boy != istenen:
         try:
