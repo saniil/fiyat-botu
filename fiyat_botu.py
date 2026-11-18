@@ -39,12 +39,7 @@ URUNLER = [
         "magaza": "Boyner",
         "url": "https://www.boyner.com.tr/jean-paul-gaultier-le-male-le-parfum-edp-125-ml-erkek-parfum-p-983107",
     },
-    {
-        "magaza": "Sephora",
-        "url": "https://www.sephora.com.tr/p/jpg-le-male-edp-125ml-P10010217.html",
-        # Sayfa varsayılan olarak 75 ml açılıyor -> bot önce "125 ml" seçeneğine tıklar
-        "secim": "125 ml",
-    },
+    # Sephora, GitHub sunucularını engellediği (Access Denied) için ev bilgisayarından takip ediliyor
 ]
 # =======================================================
 
