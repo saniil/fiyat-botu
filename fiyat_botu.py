@@ -168,8 +168,12 @@ def sayfa_getir_playwright(url, secim=None):
     """HTML döndürür; secim verilirse önce o seçeneğe tıklar ve görünen fiyatı da döndürür."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
-        b = p.chromium.launch(headless=True)
-        pg = b.new_page(user_agent=HEADERS["User-Agent"], locale="tr-TR")
+        b = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
+        ctx = b.new_context(locale="tr-TR", timezone_id="Europe/Istanbul",
+                            viewport={"width": 1366, "height": 900},
+                            extra_http_headers={"Accept-Language": "tr-TR,tr;q=0.9"})
+        ctx.add_init_script("Object.defineProperty(navigator,'webdriver',{get:()=>undefined})")
+        pg = ctx.new_page()
         pg.goto(url, wait_until="domcontentloaded", timeout=60000)
         pg.wait_for_timeout(4000)
         gorunen = None
