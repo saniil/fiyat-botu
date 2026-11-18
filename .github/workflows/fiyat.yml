@@ -1,0 +1,60 @@
+name: Fiyat Kontrol
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # her 30 dakikada bir
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Test mesajı gönder"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fiyat
+  cancel-in-progress: false
+
+jobs:
+  kontrol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Kütüphaneler
+        run: pip install -r requirements.txt
+
+      - name: Chromium önbelleği
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      - name: Chromium kur
+        run: python -m playwright install --with-deps chromium
+
+      - name: Fiyatları kontrol et
+        env:
+          WHATSAPP_TELEFON: ${{ secrets.WHATSAPP_TELEFON }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: |
+          if [ "${{ inputs.test }}" = "true" ]; then
+            python fiyat_botu.py --test
+          else
+            python fiyat_botu.py --once
+          fi
+
+      - name: Son fiyatları kaydet
+        run: |
+          git config user.name "fiyat-botu"
+          git config user.email "fiyat-botu@users.noreply.github.com"
+          git add fiyat_durum.json || true
+          git diff --cached --quiet || (git commit -m "fiyat güncellendi" && git push)
