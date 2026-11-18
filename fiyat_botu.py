@@ -164,10 +164,6 @@ def sayfa_getir_requests(url):
     return r.text
 
 
-GORUNEN_FIYAT_SECICILER = [".price-sales", ".prices .sales .value", ".product-price .value",
-                           "[itemprop=price]", ".price__current", ".product-price"]
-
-
 def sayfa_getir_playwright(url, secim=None):
     """HTML döndürür; secim verilirse önce o seçeneğe tıklar ve görünen fiyatı da döndürür."""
     from playwright.sync_api import sync_playwright
@@ -178,28 +174,55 @@ def sayfa_getir_playwright(url, secim=None):
         pg.wait_for_timeout(4000)
         gorunen = None
         if secim:
-            hedef = pg.get_by_text(re.compile(r"^\s*" + re.escape(secim).replace("\\ ", r"\s*") + r"\s*$", re.I))
-            if hedef.count() == 0:
-                log(f"  Sayfada '{secim}' seçeneği yok (şu an satışta değil)")
-                b.close()
-                return None, None
-            try:
-                hedef.first.click(timeout=10000)
-                pg.wait_for_timeout(4000)
-            except Exception as e:
-                log(f"  '{secim}' seçeneğine tıklanamadı: {e.__class__.__name__}")
-                b.close()
-                return None, None
-            # Fiyat: ürün başlığından sonra, "farklı boylarını" bölümünden önce görünen ilk TL tutarı
-            metin = pg.inner_text("body")
-            bitis = metin.find("farklı boy")
-            bolum = metin[:bitis] if bitis > 0 else metin
-            tutarlar = re.findall(r"(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:TL|₺)(?!\s*/)", bolum)
-            if tutarlar:
-                gorunen = tl_to_float(tutarlar[-1])
+            gorunen = secili_boy_fiyati(pg, secim)
         html = pg.content()
         b.close()
         return html, gorunen
+
+
+def _sephora_oku(pg):
+    """(seçili boy ml, ana fiyat, 100ml birim fiyat) döndürür."""
+    metin = pg.inner_text("body")
+    i = metin.find("farklı boy")
+    if i < 0:
+        return None, None, None
+    tutarlar = re.findall(r"(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:TL|₺)", metin[:i])
+    m = re.search(r"farklı boy[^\n]*\n+\s*(\d+)\s*ml\s*\n+\s*([\d.,]+)\s*₺\s*/\s*100", metin[i - 5:])
+    ana = tl_to_float(tutarlar[-1]) if tutarlar else None
+    if not m:
+        return None, ana, None
+    return int(m.group(1)), ana, tl_to_float(m.group(2))
+
+
+def secili_boy_fiyati(pg, secim):
+    """Sephora tipi boy seçici: seçili boy istenen değilse seçiciyi açıp istenen boya tıklar."""
+    istenen = int(re.search(r"\d+", secim).group())
+    boy, ana, birim = _sephora_oku(pg)
+    if boy is None:
+        log("  Boy seçici bulunamadı")
+        return None
+    if boy != istenen:
+        try:
+            pg.get_by_text(f"{boy} ml", exact=True).first.click(timeout=10000)
+            pg.wait_for_timeout(2000)
+            secenek = pg.get_by_text(f"{istenen} ml", exact=True)
+            if secenek.count() == 0:
+                log(f"  '{istenen} ml' seçeneği yok (şu an satışta değil)")
+                return None
+            secenek.last.click(timeout=10000)
+            pg.wait_for_timeout(4000)
+        except Exception as e:
+            log(f"  Boy seçilemedi: {e.__class__.__name__}")
+            return None
+        boy, ana, birim = _sephora_oku(pg)
+    if boy != istenen or not ana:
+        log(f"  {istenen} ml seçilemedi (seçili: {boy} ml)")
+        return None
+    # Güvenlik: ana fiyat, birim fiyatla tutarlı mı? (yanlış boyun fiyatını okumamak için)
+    if birim and abs(ana - birim * istenen / 100) > ana * 0.02:
+        log(f"  Fiyat tutarsız: {ana} vs {birim}/100ml")
+        return None
+    return ana
 
 
 def fiyat_al(url, secim=None) -> float | None:
