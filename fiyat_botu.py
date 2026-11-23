@@ -30,9 +30,9 @@ CALLMEBOT_APIKEY = os.environ.get("CALLMEBOT_APIKEY", "")  # GitHub Secrets'ten 
 
 KONTROL_DAKIKA = 30                  # kaç dakikada bir kontrol edilsin
 
-# Sadece fiyat bu değerin ALTINA inince mesaj atılır.
+# Sadece fiyat bu değerin ALTINA inince mesaj atılır (Boyner'de "Sepette" fiyatı okunur).
 # Altındayken fiyat daha da düşerse yine haber verir.
-HEDEF_FIYAT = 7000
+HEDEF_FIYAT = 6142.50
 
 URUNLER = [
     {
@@ -289,7 +289,7 @@ def kontrol_et():
 
         if ilk_kez_hedefte:
             whatsapp_gonder(
-                f"🎯 {HEDEF_FIYAT:,.0f} TL ALTINA DÜŞTÜ - {magaza}\n"
+                f"🎯 {HEDEF_FIYAT:,.2f} TL ALTINA DÜŞTÜ - {magaza}\n"
                 f"Le Male Le Parfum EDP 125 ml\n"
                 f"Şu an: {fiyat:,.2f} TL" + (f" (önceki {eski:,.2f} TL)" if eski else "") +
                 f"\n{url}"
