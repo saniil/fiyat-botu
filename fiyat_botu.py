@@ -245,10 +245,14 @@ def fiyat_al(url, secim=None) -> float | None:
         if p:
             return p
     except Exception as e:
-        log(f"  requests başarısız ({e.__class__.__name__}), tarayıcı deneniyor...")
+        log(f"  requests başarısız ({e}), tarayıcı deneniyor...")
     try:
         html, _ = sayfa_getir_playwright(url)
-        return html_fiyat(html)
+        p = html_fiyat(html)
+        if p is None:
+            baslik = re.search(r"<title>(.*?)</title>", html or "", re.S)
+            log(f"  Tarayıcı sayfası: {baslik.group(1).strip()[:80] if baslik else '-'} ({len(html or '')} byte)")
+        return p
     except ImportError:
         log("  Playwright kurulu değil (pip install playwright && playwright install chromium)")
     except Exception as e:

@@ -70,7 +70,7 @@ jobs:
             python fiyat_botu.py --once || true
             git add fiyat_durum.json
             git diff --cached --quiet || (git commit -qm "fiyat güncellendi" && (git push -q || (git pull -q --rebase && git push -q)))
-            [ "$i" -lt "$TUR" ] && sleep "$ARA"
+            if [ "$i" -lt "$TUR" ]; then sleep "$ARA"; fi
           done
 
       - name: Sonraki çalışmayı başlat
