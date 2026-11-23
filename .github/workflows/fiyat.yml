@@ -74,7 +74,7 @@ jobs:
           done
 
       - name: Sonraki çalışmayı başlat
-        if: ${{ !inputs.test && always() }}
+        if: ${{ !inputs.test && !cancelled() }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api -X POST "repos/${{ github.repository }}/actions/workflows/fiyat.yml/dispatches" -f ref=main
